@@ -42,6 +42,14 @@ export default class SimpleTreeComponent extends React.PureComponent<Props> {
       return providerProps.dataProvider;
     } else {
       const imodelProps = props as IModelConnectionProps;
+      // tslint:disable-next-line: no-console
+      console.log("props:");
+      // tslint:disable-next-line: no-console
+      console.log(props);
+      // tslint:disable-next-line: no-console
+      console.log("imodelProps");
+      // tslint:disable-next-line: no-console
+      console.log(imodelProps);
       return new PresentationTreeDataProvider(imodelProps.imodel, imodelProps.rulesetId);
     }
   }
