@@ -41,7 +41,11 @@ export default class SimplePropertiesComponent extends React.PureComponent<Props
       return providerProps.dataProvider;
     } else {
       const imodelProps = props as IModelConnectionProps;
-      return new PresentationPropertyDataProvider(imodelProps.imodel, imodelProps.rulesetId);
+      let temp: PresentationPropertyDataProvider = new PresentationPropertyDataProvider(imodelProps.imodel, imodelProps.rulesetId);
+      console.log("ZACH_PROPERTIES_START");
+      // ZACH_PROPERTIES_HERE
+      console.log("ZACH_PROPERTIES_END");
+      return temp;
     }
   }
 
