@@ -6,6 +6,7 @@
 3. Automatically update on changes.
 4. Formatting/updating viewer relative to model that is chosen (not really necessary).
 5. Convert backend to be entirely electron/desktop based. - Nick 
+   - Current Issues with this, either node integration is *true* and jQuery can't be loaded on external sites (ie: bentley login redirects), or alternatively node integration is *false* and jQuery can be loaded, because web page behavior will be normal, but the front end of my electron application cannot communicate with the backend.
 6. Be able to edit properties in the viewer. -Zach
 ## Git instructions
 
