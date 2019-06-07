@@ -42,15 +42,7 @@ export default class SimpleTreeComponent extends React.PureComponent<Props> {
       return providerProps.dataProvider;
     } else {
       const imodelProps = props as IModelConnectionProps;
-      let temp: PresentationTreeDataProvider = new PresentationTreeDataProvider(imodelProps.imodel, imodelProps.rulesetId);
-      console.log("ZACH_TREE_START");
-      // temp is NOT a ImmediatelyLoadedTreeNodeItem[]
-      // temp is NOT a Promise<ImmediatelyLoadedTreeNodeItem[]
-      // temp is NOT a TreeDataProviderMethod
-      // temp IS a ITreeDataProvider
-      console.log(temp.getNodes());
-      console.log("ZACH_TREE_END");
-      return temp;
+      return new PresentationTreeDataProvider(imodelProps.imodel, imodelProps.rulesetId);
     }
   }
   //make a button here
