@@ -1,0 +1,203 @@
+From f2d19ab17a9f63637af8e26bf9bf73430d9f1d7a Mon Sep 17 00:00:00 2001
+From: Ramanujam Raman <Ramanujam.Raman@bentley.com>
+Date: Sun, 2 Jun 2019 17:12:06 -0400
+Subject: [PATCH] Added an example to demonstrate visualizing elements by
+ category.
+
+---
+ package-lock.json                            | 32 ++++++++++++++
+ package.json                                 |  5 ++-
+ src/frontend/components/App.tsx              | 46 +++++++++++++++++++-
+ src/frontend/components/distinct-colors.d.ts | 15 +++++++
+ 4 files changed, 95 insertions(+), 3 deletions(-)
+ create mode 100644 src/frontend/components/distinct-colors.d.ts
+
+diff --git a/package-lock.json b/package-lock.json
+index 6452b99..2bda2b4 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -928,6 +928,12 @@
+         "@types/node": "*"
+       }
+     },
++    "@types/chroma-js": {
++      "version": "1.4.1",
++      "resolved": "https://registry.npmjs.org/@types/chroma-js/-/chroma-js-1.4.1.tgz",
++      "integrity": "sha512-i9hUiO3bwgmzZUDwBuR65WqsBQ/nwN+H2fKX0bykXCdd8cFQEuIj8vI7FXjyb2f5z5h+pv76I/uakikKSgaqTA==",
++      "dev": true
++    },
+     "@types/connect": {
+       "version": "3.4.32",
+       "resolved": "https://registry.npmjs.org/@types/connect/-/connect-3.4.32.tgz",
+@@ -2842,6 +2848,11 @@
+       "resolved": "https://registry.npmjs.org/chownr/-/chownr-1.1.1.tgz",
+       "integrity": "sha512-j38EvO5+LHX84jlo6h4UzmOwi0UgW61WRyPtJz4qaadK5eY3BTS5TY/S1Stc3Uk2lIM6TPevAlULiEJwie860g=="
+     },
++    "chroma-js": {
++      "version": "2.0.3",
++      "resolved": "https://registry.npmjs.org/chroma-js/-/chroma-js-2.0.3.tgz",
++      "integrity": "sha512-2kTvZZOFSV1O81/rm99t9vmkh9jQxsHqsRRoZevDVz/VCC3yKMyPuMK8M5yHG+UMg2tV6cRoqtZtgcD92udcBw=="
++    },
+     "chrome-trace-event": {
+       "version": "1.0.2",
+       "resolved": "https://registry.npmjs.org/chrome-trace-event/-/chrome-trace-event-1.0.2.tgz",
+@@ -4330,6 +4341,22 @@
+       "integrity": "sha1-44Mx8IRLukm5qctxx3FYWqsbxlo=",
+       "dev": true
+     },
++    "distinct-colors": {
++      "version": "1.0.4",
++      "resolved": "https://registry.npmjs.org/distinct-colors/-/distinct-colors-1.0.4.tgz",
++      "integrity": "sha1-Z9/KV5S8qVDAHSUaUqozWG5a97Q=",
++      "requires": {
++        "chroma-js": "^1.1.1",
++        "mout": "^0.11.0"
++      },
++      "dependencies": {
++        "chroma-js": {
++          "version": "1.4.1",
++          "resolved": "https://registry.npmjs.org/chroma-js/-/chroma-js-1.4.1.tgz",
++          "integrity": "sha512-jTwQiT859RTFN/vIf7s+Vl/Z2LcMrvMv3WUFmd/4u76AdlFC0NTNgqEEFPcRiHmAswPsMiQEDZLM8vX8qXpZNQ=="
++        }
++      }
++    },
+     "dnd-core": {
+       "version": "4.0.5",
+       "resolved": "https://registry.npmjs.org/dnd-core/-/dnd-core-4.0.5.tgz",
+@@ -9302,6 +9329,11 @@
+       "integrity": "sha512-gFD2xGCl8YFgGHsqJ9NKRVdwlioeW3mI1iqfLNYQOv0+6JRwG58Zk9DIGQgyIaffSYaO1xsKnMaYzzNr1KyIAw==",
+       "dev": true
+     },
++    "mout": {
++      "version": "0.11.1",
++      "resolved": "https://registry.npmjs.org/mout/-/mout-0.11.1.tgz",
++      "integrity": "sha1-ujYR318OWx/7/QEWa48C0fX6K5k="
++    },
+     "move-concurrently": {
+       "version": "1.0.1",
+       "resolved": "https://registry.npmjs.org/move-concurrently/-/move-concurrently-1.0.1.tgz",
+diff --git a/package.json b/package.json
+index 6b1ab14..3f0935d 100644
+--- a/package.json
++++ b/package.json
+@@ -89,7 +89,9 @@
+     "react-dnd-html5-backend": "^5.0.1",
+     "react-dom": "^16.4.2",
+     "react-redux": "^5.0.7",
+-    "redux": "^4.0.0"
++    "redux": "^4.0.0",
++    "distinct-colors": "^1.0.4",
++    "chroma-js": "^2.0.3"
+   },
+   "devDependencies": {
+     "@bentley/build-tools": "0.191.0",
+@@ -103,6 +105,7 @@
+     "@types/puppeteer": "^1.10.0",
+     "@types/react": "^16.4.14",
+     "@types/react-dom": "16.0.7",
++    "@types/chroma-js": "^1.4.1",
+     "chai": "^4.2.0",
+     "chromedriver": "^2.34.1",
+     "electron": "^4.0.1",
+diff --git a/src/frontend/components/App.tsx b/src/frontend/components/App.tsx
+index 1739d2b..f05aca3 100644
+--- a/src/frontend/components/App.tsx
++++ b/src/frontend/components/App.tsx
+@@ -6,7 +6,7 @@ import * as React from "react";
+ import { Id64String, OpenMode } from "@bentley/bentleyjs-core";
+ import { Range3d } from "@bentley/geometry-core";
+ import { AccessToken, ConnectClient, IModelQuery, Project, Config } from "@bentley/imodeljs-clients";
+-import { IModelApp, IModelConnection, FrontendRequestContext, AuthorizedFrontendRequestContext, DrawingViewState, ScreenViewport } from "@bentley/imodeljs-frontend";
++import { IModelApp, IModelConnection, FrontendRequestContext, AuthorizedFrontendRequestContext, DrawingViewState, ScreenViewport, EmphasizeElements, FeatureOverrideType } from "@bentley/imodeljs-frontend";
+ import { Presentation, SelectionChangeEventArgs, ISelectionProvider } from "@bentley/presentation-frontend";
+ import { Button, ButtonSize, ButtonType, Spinner, SpinnerSize } from "@bentley/ui-core";
+ import { SignIn } from "@bentley/ui-components";
+@@ -17,6 +17,9 @@ import TreeWidget from "./Tree";
+ import ViewportContentControl from "./Viewport";
+ import "@bentley/icons-generic-webfont/dist/bentley-icons-generic-webfont.css";
+ import "./App.css";
++import chroma = require("chroma-js");
++import distinctColors = require("distinct-colors");
++import { ColorDef } from "@bentley/imodeljs-common";
+ 
+ // tslint:disable: no-console
+ // cSpell:ignore imodels
+@@ -88,6 +91,44 @@ export default class App extends React.Component<{}, AppState> {
+     }
+   }
+ 
++  /**
++   * Sets up the display of the drawing model with elements colored by their category
++   * @param modelId Drawing model id
++   * @param vp Viewport the model is displayed in
++   */
++  public async setupDisplayByCategories(modelId: Id64String, vp: ScreenViewport) {
++    // Setup default appearance for "background" elements
++    const emphasize = EmphasizeElements.getOrCreate(vp);
++    emphasize.createDefaultAppearance();
++    // Note: Starting with 0.192.0 (expected to be available June 3, 2019), you can customize defaultAppearance with this call
++    // e.g., emphasize.defaultAppearance = FeatureSymbology.Appearance.fromRgb(new ColorDef(ColorByName.lightGray));
++
++    // Determine all distinct categories in the model
++    const categoryIds = new Array<Id64String>();
++    for await (const categoryId of vp.iModel.query("SELECT DISTINCT Category.Id as id FROM bis.GeometricElement2d WHERE Model.Id=:modelId", {modelId})) {
++      categoryIds.push(categoryId.id);
++    }
++
++    // Determine a palette of visually distinct colors for every category of elements in the model
++    const colorPalette: chroma.Color[] = distinctColors({count: categoryIds.length});
++
++    // Setup the display for each distinct category in the selected model
++    emphasize.clearOverriddenElements(vp);
++    for (let ii = 0; ii < categoryIds.length; ii++) {
++      // Gather up the elements in the model and category
++      const elementIds = new Array<Id64String>();
++      const categoryId = categoryIds[ii];
++      const ecsql = "SELECT ECInstanceId as id FROM bis.GeometricElement2d WHERE Model.Id=:modelId AND Category.Id=:categoryId";
++      for await (const elementId of vp.iModel.query(ecsql, {modelId, categoryId})) {
++        elementIds.push(elementId.id);
++      }
++
++      // Override the display of the elements
++      const overrideColor = ColorDef.from(...colorPalette[ii].rgb());
++      emphasize.overrideElements(elementIds, vp, overrideColor, FeatureOverrideType.ColorOnly, false);
++    }
++  }
++
+   private _onSelectionChanged = (evt: SelectionChangeEventArgs, selectionProvider: ISelectionProvider) => {
+     const selection = selectionProvider.getSelection(evt.imodel, evt.level);
+     if (!selection.isEmpty) {
+@@ -95,7 +136,8 @@ export default class App extends React.Component<{}, AppState> {
+         if (ecClass === "BisCore:Drawing") { // if we clicked on a row that is a drawing, switch the view to it.
+           const viewport = IModelApp.viewManager.selectedView!;
+           const drawingId = ids.values().next().value;
+-          this.changeView(drawingId, viewport, true);  // tslint:disable-line: no-floating-promises
++          await this.changeView(drawingId, viewport, true);
++          await this.setupDisplayByCategories(drawingId, viewport);
+         }
+       });
+     }
+diff --git a/src/frontend/components/distinct-colors.d.ts b/src/frontend/components/distinct-colors.d.ts
+new file mode 100644
+index 0000000..b99456c
+--- /dev/null
++++ b/src/frontend/components/distinct-colors.d.ts
+@@ -0,0 +1,15 @@
++/*---------------------------------------------------------------------------------------------
++* Copyright (c) 2019 Bentley Systems, Incorporated. All rights reserved.
++* Licensed under the MIT License. See LICENSE.md in the project root for license terms.
++*--------------------------------------------------------------------------------------------*/
++
++/// <reference types="node" />
++
++declare module 'distinct-colors' {
++
++  import chroma = require('chroma-js');
++
++  function distinctColors(options: any): chroma.Color[];
++
++  export = distinctColors;
++}
+-- 
+2.21.0.windows.1
+

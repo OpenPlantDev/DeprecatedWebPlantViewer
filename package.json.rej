@@ -1,0 +1,12 @@
+diff a/package.json b/package.json	(rejected hunks)
+@@ -89,7 +89,9 @@
+     "react-dnd-html5-backend": "^5.0.1",
+     "react-dom": "^16.4.2",
+     "react-redux": "^5.0.7",
+-    "redux": "^4.0.0"
++    "redux": "^4.0.0",
++    "distinct-colors": "^1.0.4",
++    "chroma-js": "^2.0.3"
+   },
+   "devDependencies": {
+     "@bentley/build-tools": "0.191.0",

@@ -45,7 +45,7 @@ export default class SimpleTreeComponent extends React.PureComponent<Props> {
       return new PresentationTreeDataProvider(imodelProps.imodel, imodelProps.rulesetId);
     }
   }
-  //make a button here
+
   public render() {
     return (
       <>

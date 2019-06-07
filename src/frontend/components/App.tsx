@@ -6,7 +6,7 @@ import * as React from "react";
 import { Id64String, OpenMode } from "@bentley/bentleyjs-core";
 import { Range3d } from "@bentley/geometry-core";
 import { AccessToken, ConnectClient, IModelQuery, Project, Config } from "@bentley/imodeljs-clients";
-import { IModelApp, IModelConnection, FrontendRequestContext, AuthorizedFrontendRequestContext, DrawingViewState, ScreenViewport} from "@bentley/imodeljs-frontend";
+import { IModelApp, IModelConnection, FrontendRequestContext, AuthorizedFrontendRequestContext, DrawingViewState, ScreenViewport, EmphasizeElements, FeatureOverrideType } from "@bentley/imodeljs-frontend";
 import { Presentation, SelectionChangeEventArgs, ISelectionProvider } from "@bentley/presentation-frontend";
 import { Button, ButtonSize, ButtonType, Spinner, SpinnerSize } from "@bentley/ui-core";
 import { SignIn } from "@bentley/ui-components";
@@ -17,8 +17,9 @@ import TreeWidget from "./Tree";
 import ViewportContentControl from "./Viewport";
 import "@bentley/icons-generic-webfont/dist/bentley-icons-generic-webfont.css";
 import "./App.css";
-//import {BrowserWindow} from "electron";
-//add another / to make a triple reference directive <reference path="electron" name="foo"/>
+import chroma = require("chroma-js");
+import distinctColors = require("distinct-colors");
+import { ColorDef } from "@bentley/imodeljs-common";
 
 // tslint:disable: no-console
 // cSpell:ignore imodels
@@ -40,7 +41,6 @@ export default class App extends React.Component<{}, AppState> {
 
   /** Creates an App instance */
   constructor(props?: any, context?: any) {
-
     super(props, context);
     this.state = {
       user: {
@@ -49,14 +49,13 @@ export default class App extends React.Component<{}, AppState> {
       },
       offlineIModel: false,
     };
-    console.log("working");
   }
 
   public componentDidMount() {
     // subscribe for unified selection changes
     Presentation.selection.selectionChange.addListener(this._onSelectionChanged);
 
-    //authorization state, and add listener to changes
+    // Initialize authorization state, and add listener to changes
     SimpleViewerApp.oidcClient.onUserStateChanged.addListener(this._onUserStateChanged);
     if (SimpleViewerApp.oidcClient.isAuthorized) {
       SimpleViewerApp.oidcClient.getAccessToken(new FrontendRequestContext()) // tslint:disable-line: no-floating-promises
@@ -74,7 +73,7 @@ export default class App extends React.Component<{}, AppState> {
   }
 
   // change the viewport to display a new drawing, by drawing id
-  public async changeView(newDrawingId: string, vp: ScreenViewport, doFit?: boolean) {
+  public async changeView(newDrawingId: string, vp: ScreenViewport, doFit?: boolean ) {
     const view = vp.view;
     if (!(view instanceof DrawingViewState)) // this only works if the viewport is showing a DrawingView
       return;
@@ -88,7 +87,45 @@ export default class App extends React.Component<{}, AppState> {
 
     if (doFit) { // optionally, change the view to show the whole drawing
       const range = await vp.iModel.models.queryModelRanges([newDrawingId]); // get the drawing's range
-      vp.zoomToVolume(Range3d.fromJSON(range[0]), { animateFrustumChange: false }); // don't bother to animate since starting point is not relevant
+      vp.zoomToVolume(Range3d.fromJSON(range[0]), {animateFrustumChange: false}); // don't bother to animate since starting point is not relevant
+    }
+  }
+
+  /**
+   * Sets up the display of the drawing model with elements colored by their category
+   * @param modelId Drawing model id
+   * @param vp Viewport the model is displayed in
+   */
+  public async setupDisplayByCategories(modelId: Id64String, vp: ScreenViewport) {
+    // Setup default appearance for "background" elements
+    const emphasize = EmphasizeElements.getOrCreate(vp);
+    emphasize.createDefaultAppearance();
+    // Note: Starting with 0.192.0 (expected to be available June 3, 2019), you can customize defaultAppearance with this call
+    // e.g., emphasize.defaultAppearance = FeatureSymbology.Appearance.fromRgb(new ColorDef(ColorByName.lightGray));
+
+    // Determine all distinct categories in the model
+    const categoryIds = new Array<Id64String>();
+    for await (const categoryId of vp.iModel.query("SELECT DISTINCT Category.Id as id FROM bis.GeometricElement2d WHERE Model.Id=:modelId", {modelId})) {
+      categoryIds.push(categoryId.id);
+    }
+
+    // Determine a palette of visually distinct colors for every category of elements in the model
+    const colorPalette: chroma.Color[] = distinctColors({count: categoryIds.length});
+
+    // Setup the display for each distinct category in the selected model
+    emphasize.clearOverriddenElements(vp);
+    for (let ii = 0; ii < categoryIds.length; ii++) {
+      // Gather up the elements in the model and category
+      const elementIds = new Array<Id64String>();
+      const categoryId = categoryIds[ii];
+      const ecsql = "SELECT ECInstanceId as id FROM bis.GeometricElement2d WHERE Model.Id=:modelId AND Category.Id=:categoryId";
+      for await (const elementId of vp.iModel.query(ecsql, {modelId, categoryId})) {
+        elementIds.push(elementId.id);
+      }
+
+      // Override the display of the elements
+      const overrideColor = ColorDef.from(...colorPalette[ii].rgb());
+      emphasize.overrideElements(elementIds, vp, overrideColor, FeatureOverrideType.ColorOnly, false);
     }
   }
 
@@ -99,7 +136,8 @@ export default class App extends React.Component<{}, AppState> {
         if (ecClass === "BisCore:Drawing") { // if we clicked on a row that is a drawing, switch the view to it.
           const viewport = IModelApp.viewManager.selectedView!;
           const drawingId = ids.values().next().value;
-          this.changeView(drawingId, viewport, true);  // tslint:disable-line: no-floating-promises
+          await this.changeView(drawingId, viewport, true);
+          await this.setupDisplayByCategories(drawingId, viewport);
         }
       });
     }
@@ -110,7 +148,6 @@ export default class App extends React.Component<{}, AppState> {
   }
 
   private _onStartSignin = async () => {
-    console.log("In the _onStartSignin method");
     this.setState((prev) => ({ user: { ...prev.user, isLoading: true } }));
     await SimpleViewerApp.oidcClient.signIn(new FrontendRequestContext());
   }
@@ -122,23 +159,12 @@ export default class App extends React.Component<{}, AppState> {
   /** Pick the first available spatial view definition in the imodel */
   private async getFirstViewDefinitionId(imodel: IModelConnection): Promise<Id64String> {
     const viewSpecs = await imodel.views.queryProps({});
-    try {
-      console.log(viewSpecs)
-    } catch (e) {
-      console.log(e);
-      console.log("Viewing specs");
-      console.log(viewSpecs);
-      console.log("Error no views returned from query");
-    }
     const acceptedViewClasses = [
-      "BisCore:SpatialViewDefinition",
+      /** "BisCore:SpatialViewDefinition", */
       "BisCore:SheetViewDefinition",
       "BisCore:DrawingViewDefinition",
-      "BisCore:OrthographicViewDefinition",
     ];
     const acceptedViewSpecs = viewSpecs.filter((spec) => (-1 !== acceptedViewClasses.indexOf(spec.classFullName)));
-    console.log("Accepted Specs");
-    console.log(acceptedViewSpecs);
     if (0 === acceptedViewSpecs.length)
       throw new Error("No valid view definitions in imodel");
 
@@ -173,16 +199,12 @@ export default class App extends React.Component<{}, AppState> {
         await imodel.close();
       }
       this.setState({ imodel: undefined, viewDefinitionId: undefined });
-      console.log("Loading view definition error");
-      console.log(e);
-      console.log(e.message);
       alert(e.message);
     }
   }
 
   private get _signInRedirectUri() {
     const split = (Config.App.get("imjs_browser_test_redirect_uri") as string).split("://");
-    console.log("redirecting after signin");
     return split[split.length - 1];
   }
 
@@ -193,14 +215,11 @@ export default class App extends React.Component<{}, AppState> {
     if (this.state.user.isLoading || window.location.href.includes(this._signInRedirectUri)) {
       // if user is currently being loaded, just tell that
       ui = `${IModelApp.i18n.translate("SimpleViewer:signing-in")}...`;
-      console.log("Signing in");
     } else if (!this.state.user.accessToken && !this.state.offlineIModel) {
       // if user doesn't have and access token, show sign in page
-      console.log("In login screen");
       ui = (<SignIn onSignIn={this._onStartSignin} onOffline={this._onOffline} />);
     } else if (!this.state.imodel || !this.state.viewDefinitionId) {
       // if we don't have an imodel / view definition id - render a button that initiates imodel open
-      console.log("Missing view definition id");
       ui = (<OpenIModelButton accessToken={this.state.user.accessToken} offlineIModel={this.state.offlineIModel} onIModelSelected={this._onIModelSelected} />);
     } else {
       // if we do have an imodel and view definition id - render imodel components
@@ -211,7 +230,7 @@ export default class App extends React.Component<{}, AppState> {
     return (
       <div className="app">
         <div className="app-header">
-          <h2>{"OpenPlant Viewer"}</h2>
+          <h2>{IModelApp.i18n.translate("SimpleViewer:welcome-message")}</h2>
         </div>
         {ui}
       </div>
@@ -229,7 +248,6 @@ interface OpenIModelButtonProps {
 interface OpenIModelButtonState {
   isLoading: boolean;
 }
-
 /** Renders a button that opens an iModel identified in configuration */
 class OpenIModelButton extends React.PureComponent<OpenIModelButtonProps, OpenIModelButtonState> {
   public state = { isLoading: false };
@@ -276,8 +294,6 @@ class OpenIModelButton extends React.PureComponent<OpenIModelButtonProps, OpenIM
         imodel = await IModelConnection.open(info.projectId, info.imodelId, OpenMode.Readonly);
       }
     } catch (e) {
-      console.log(e);
-      console.log(e.message);
       alert(e.message);
     }
     await this.onIModelSelected(imodel);
@@ -300,7 +316,6 @@ interface IModelComponentsProps {
 }
 /** Renders a viewport, a tree, a property grid and a table */
 class IModelComponents extends React.PureComponent<IModelComponentsProps> {
-
   public render() {
     // ID of the presentation ruleset used by all of the controls; the ruleset
     // can be found at `assets/presentation_rules/Default.PresentationRuleSet.xml`
@@ -313,7 +328,6 @@ class IModelComponents extends React.PureComponent<IModelComponentsProps> {
         <div className="right">
           <div className="top">
             <TreeWidget imodel={this.props.imodel} rulesetId={rulesetId} />
-          <Button title="Navigation" id="New iModel" /*onClick={() => this.newWindow()}*/>Select New iModel</Button>
           </div>
           <div className="bottom">
             <PropertiesWidget imodel={this.props.imodel} rulesetId={rulesetId} />
@@ -325,22 +339,4 @@ class IModelComponents extends React.PureComponent<IModelComponentsProps> {
       </div>
     );
   }
-
-  // public newWindow() {
-
-  //   const win = new BrowserWindow({
-  //     width: 800,
-  //     height: 600,
-  //     center: true,
-  //     frame: true,
-  //     transparent: false,
-  //     movable: true,
-  //       webPreferences: {
-  //       nodeIntegration: true,
-  //       },
-  //   });
-  //   win.loadURL("https://qa-connect-webportal.bentley.com/SelectProject/Index");
-  //   win.on("close", function () { win.close() })
-  //   win.show();
-  // }
 }
