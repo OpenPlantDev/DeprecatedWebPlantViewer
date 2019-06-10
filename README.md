@@ -14,35 +14,42 @@ See http://imodeljs.org for comprehensive documentation on the iModel.js API and
 
 ## Development Setup
 
-1. (Optional) Create a sample project using the procedure at [Developer Registration](https://imodeljs.github.io/iModelJs-docs-output/getting-started/#developer-registration).  This step is not needed if you already have a project to test with.
+1.	If you do not have a ProjectWise Project, register a sample one. Otherwise, you can skip this step.
+	- If in *Production*, go to https://imodeljs.github.io/iModelJs-docs-output/getting-started/registration-dashboard/.
+	- If in *QA*, go to http://builds.bentley.com/prgbuilds/AzureBuilds/iModelJsDocs/public/getting-started/registration-dashboard/.
+	Go to [Registered Products], and select [+ New Project].
+	Under [iModel Source], use the sample [Bentley Example] with the [Retail Building Sample] selection.
+	
+	For more information, see the section on [authorization](https://imodeljs.github.io/iModelJs-docs-output/learning/common/accesstoken/.
 
-2. (Recommended) Register your application at [Developer Registration](https://imodeljs.github.io/iModelJs-docs-output/getting-started/#developer-registration).
+2.	Open Command Prompt and navigate into the directory of the viewer application.
 
-    For the purpose of running this sample on localhost, ensure your registration includes http://localhost:3000/signin-callback as a valid redirect URI.
+3.	In Command Prompt, type *code .* to open the directory in Visual Studio Code.
 
-    Note: If you are just testing on localhost you can use the default registration included in this sample. However, it's recommended that you complete the registration, especially since registration is a requirement before the application can be deployed. For more information, see the section on [authorization](https://imodeljs.github.io/iModelJs-docs-output/learning/common/accesstoken/).
+4.	Edit [src/common/config.json] with your project name and iModel name.
 
-3. Edit [src/common/configuration.ts](./src/common/configuration.ts) and [src/common/config.json](./src/common/config.json) to set the values you obtain from the registration process.
+5.	Find the following line of code in [src/common/configuration.json]:
+	*	imjs_buddi_resolve_url_using_region: "102",
+	- If in *Production*, comment this out.
+	- If in *QA*, leave it uncommented.
 
-4. Install the dependencies
+6.	Type [Ctrl + `] to open the terminal in Visual Studio Code.
 
-  ```sh
-  npm install
-  ```
+7.	Type the following command in the terminal to install the dependencies:
+	*	npm install
 
-5. Build the application
+8.	Type the following command in the terminal to build the application:
+	*	npm run build
+	
+9.	Type the following command in the terminal to run the application:
+	*	npm run start:servers
+	
+	There are two servers, a web server that delivers the static web resources (the frontend Javascript, localizable strings, fonts, cursors, etc.),
+	and the backend RPC server that opens the iModel on behalf of the application.
+	This starts them both running locally.
 
-  ```sh
-  npm run build
-  ```
-
-6. There are two servers, a web server that delivers the static web resources (the frontend Javascript, localizable strings, fonts, cursors, etc.), and the backend RPC server that opens the iModel on behalf of the application. Start them both running locally:
-
-  ```sh
-  npm run start:servers
-  ```
-
-7. Open a web browser (e.g., Chrome or Edge), and browse to localhost:3000.
+10.	Open a web browser (e.g. Chrome, Edge), and navigate to the following:
+	*	localhost:3000
 
 [//]: # (Commented out until Electron version fixed. Note: The Electron version is meant to run on desktops, but will currently not work within a virtual machine.)
 
